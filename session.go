@@ -2,6 +2,8 @@ package cfrabbit
 
 import (
 	"errors"
+	"fmt"
+	"github.com/google/uuid"
 	"github.com/r-franke/cfrabbit/config"
 	"github.com/streadway/amqp"
 	"log"
@@ -230,7 +232,7 @@ func (session *Session) Consume(queueName string) (<-chan amqp.Delivery, error) 
 
 	return session.channel.Consume(
 		queueName,
-		"",    // Consumer
+		fmt.Sprintf("%s-%s", config.AppName, uuid.NewString()), // Consumer
 		false, // Auto-Ack
 		false, // Exclusive
 		false, // No-local

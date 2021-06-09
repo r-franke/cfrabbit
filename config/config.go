@@ -7,9 +7,12 @@ import (
 	"os"
 )
 
-var RMQConnectionString string
-var TlsConfig = tls.Config{}
-var DevMode bool
+var (
+	RMQConnectionString string
+	TlsConfig           = tls.Config{}
+	DevMode             bool
+	AppName             string
+)
 
 func init() {
 	log.Println("Loading settings")
@@ -44,6 +47,8 @@ func loadHaasEnvironment() {
 	if RMQConnectionString == "" {
 		log.Fatal("RMQ settings in Haas env are incomplete!")
 	}
+
+	AppName = appEnv.Name
 }
 
 func loadDevEnvironment() {
@@ -61,4 +66,6 @@ func loadDevEnvironment() {
 	if !found {
 		log.Fatal("DEV_RMQ_URL env-variable not found!")
 	}
+
+	AppName = "dev-instance"
 }
