@@ -39,7 +39,7 @@ func loadHaasEnvironment() {
 		log.Println("Multiple Rabbit bindings discovered. Loading first one by default.")
 	}
 	credentials := rabbitVars[0].Credentials
-	RMQConnectionString = credentials["uri"].(string)
+	RMQConnectionString = credentials["url"].(string)
 
 	if RMQConnectionString == "" {
 		log.Fatal("RMQ settings in Haas env are incomplete!")
@@ -57,8 +57,8 @@ func loadDevEnvironment() {
 	}
 	TlsConfig.InsecureSkipVerify = true
 
-	RMQConnectionString, found = os.LookupEnv("RMQ_DEV_URI")
+	RMQConnectionString, found = os.LookupEnv("RMQ_DEV_URL")
 	if !found {
-		log.Fatal("DEV_RMQ_URI env-variable not found!")
+		log.Fatal("DEV_RMQ_URL env-variable not found!")
 	}
 }

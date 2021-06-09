@@ -1,6 +1,7 @@
 package producer
 
 import (
+	"github.com/r-franke/cfrabbit"
 	"github.com/r-franke/cfrabbit/config"
 	"github.com/streadway/amqp"
 	"log"
@@ -8,7 +9,7 @@ import (
 )
 
 type Publisher struct {
-	uri          string
+	url          string
 	exchange     Exchange
 	errorChannel chan *amqp.Error
 	connection   *amqp.Connection
@@ -24,7 +25,7 @@ type Exchange struct {
 //goland:noinspection GoUnusedExportedFunction
 func NewPublisher(exchange Exchange) *Publisher {
 	p := Publisher{
-		uri:      config.RMQConnectionString,
+		url:      config.RMQConnectionString,
 		exchange: exchange,
 	}
 
@@ -36,10 +37,10 @@ func NewPublisher(exchange Exchange) *Publisher {
 
 func (p *Publisher) connect() {
 	for {
-		log.Printf("Publisher is connecting to RabbitMQ on %s\n", p.uri)
+		log.Printf("Publisher is connecting to RabbitMQ on %s\n", p.url)
 
 		var err error
-		p.connection, err = amqp.DialTLS(p.uri, &config.TlsConfig)
+		p.connection, p.channel, err = cfrabbit.Setup(p.url)
 		if err != nil {
 			log.Println("Connection to RabbitMQ failed. Retrying in 1 sec... ", err)
 			log.Println(err.Error())
@@ -50,7 +51,6 @@ func (p *Publisher) connect() {
 		p.errorChannel = make(chan *amqp.Error)
 		p.connection.NotifyClose(p.errorChannel)
 
-		p.openChannel()
 		err = p.channel.ExchangeDeclare(p.exchange.Name, p.exchange.ExchangeType, true, false, false, false, nil)
 		log.Fatalf("Cannot declare exchange %s\n%s", p.exchange.Name, err)
 

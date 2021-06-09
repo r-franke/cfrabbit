@@ -1,6 +1,7 @@
 package consumer
 
 import (
+	"github.com/r-franke/cfrabbit"
 	"github.com/r-franke/cfrabbit/config"
 	"github.com/streadway/amqp"
 	"log"
@@ -21,7 +22,7 @@ var inRecovery = false
 type MessageHandler func(<-chan amqp.Delivery)
 
 type Consumer struct {
-	uri          string
+	url          string
 	queue        string
 	exchange     string
 	errorChannel chan *amqp.Error
@@ -36,7 +37,7 @@ type Consumer struct {
 //goland:noinspection GoUnusedExportedFunction
 func NewConsumer(exchange string, queue string, routingkey string) *Consumer {
 	c := Consumer{
-		uri:        config.RMQConnectionString,
+		url:        config.RMQConnectionString,
 		queue:      queue,
 		exchange:   exchange,
 		handlers:   make([]MessageHandler, 0),
@@ -92,10 +93,10 @@ func (c *Consumer) reconnector() {
 
 func (c *Consumer) connect() {
 	for {
-		log.Printf("Consumer is connecting to RabbitMQ on %s, queue: %s\n", c.uri, c.queue)
+		log.Printf("Consumer is connecting to RabbitMQ on %s, queue: %s\n", c.url, c.queue)
 
 		var err error
-		c.connection, err = amqp.DialTLS(c.uri, &config.TlsConfig)
+		c.connection, c.channel, err = cfrabbit.Setup(c.url)
 		if err != nil {
 			log.Println("Connection to RabbitMQ failed. Retrying in 1 sec... ", err)
 			log.Println(err.Error())
@@ -106,7 +107,6 @@ func (c *Consumer) connect() {
 		c.errorChannel = make(chan *amqp.Error)
 		c.connection.NotifyClose(c.errorChannel)
 
-		c.openChannel()
 		queue := c.declareQueue()
 		c.bindQueue(queue, c.routingKey)
 
@@ -141,14 +141,6 @@ func (c *Consumer) bindQueue(queue amqp.Queue, routingKey string) {
 	)
 	if err != nil {
 		log.Fatalf("Cannot bind queue %s to exchange %s\n%s", queue.Name, c.exchange, err.Error())
-	}
-}
-
-func (c *Consumer) openChannel() {
-	var err error
-	c.channel, err = c.connection.Channel()
-	if err != nil {
-		log.Fatalf("Opening channel failed\n%s", err.Error())
 	}
 }
 
