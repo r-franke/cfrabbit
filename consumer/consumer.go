@@ -1,7 +1,7 @@
 package consumer
 
 import (
-	"github.com/r-franke/cfrabbit/internal"
+	"github.com/r-franke/cfrabbit/config"
 	"github.com/streadway/amqp"
 	"log"
 	"time"
@@ -36,7 +36,7 @@ type Consumer struct {
 //goland:noinspection GoUnusedExportedFunction
 func NewConsumer(exchange string, queue string, routingkey string) *Consumer {
 	c := Consumer{
-		uri:        internal.RMQConnectionString,
+		uri:        config.RMQConnectionString,
 		queue:      queue,
 		exchange:   exchange,
 		handlers:   make([]MessageHandler, 0),
@@ -84,19 +84,18 @@ func (c *Consumer) reconnector() {
 
 			c.connect()
 			c.recoverConsumers()
-		} else {
-			log.Printf("Not reconnecting, consumer was closed manually")
-			break
 		}
+		log.Printf("Not reconnecting, consumer was closed manually")
+		return
 	}
 }
 
 func (c *Consumer) connect() {
 	for {
-		log.Printf("Consumer is connecting to rabbitmq on %s, queue: %s\n", c.uri, c.queue)
+		log.Printf("Consumer is connecting to RabbitMQ on %s, queue: %s\n", c.uri, c.queue)
 
 		var err error
-		c.connection, err = amqp.DialTLS(c.uri, &internal.TlsConfig)
+		c.connection, err = amqp.DialTLS(c.uri, &config.TlsConfig)
 		if err != nil {
 			log.Println("Connection to RabbitMQ failed. Retrying in 1 sec... ", err)
 			log.Println(err.Error())
@@ -107,22 +106,22 @@ func (c *Consumer) connect() {
 		c.errorChannel = make(chan *amqp.Error)
 		c.connection.NotifyClose(c.errorChannel)
 
-		log.Println("Rabbitmq connection receiving location events established")
-
 		c.openChannel()
 		queue := c.declareQueue()
 		c.bindQueue(queue, c.routingKey)
+
+		return
 	}
 }
 
 func (c *Consumer) declareQueue() amqp.Queue {
 	queue, err := c.channel.QueueDeclare(
-		c.queue,          // name
-		true,             // durable
-		internal.DevMode, // delete when unused
-		false,            // exclusive
-		false,            // no-wait
-		nil,              // arguments
+		c.queue,        // name
+		true,           // durable
+		config.DevMode, // delete when unused
+		false,          // exclusive
+		false,          // no-wait
+		nil,            // arguments
 	)
 
 	if err != nil {
