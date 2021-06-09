@@ -208,11 +208,9 @@ func (session *Session) UnsafePublish(exchange string, routingkey string, data [
 	)
 }
 
-// Consume will continuously put queue items on the channel.
-// It is required to call delivery.Ack when it has been
-// successfully processed, or delivery.Nack when it fails.
-// Ignoring this will cause data to build up on the server.
-func (session *Session) Consume(queueName string) (<-chan amqp.Delivery, error) {
+//goland:noinspection GoUnusedExportedFunction
+func NewConsumer(queueName string, routingkey string, exchange string) (<-chan amqp.Delivery, error) {
+	session := New()
 	if !session.isReady {
 		return nil, errNotConnected
 	}
@@ -226,6 +224,11 @@ func (session *Session) Consume(queueName string) (<-chan amqp.Delivery, error) 
 		nil,   // Arguments
 	)
 
+	if err != nil {
+		return nil, err
+	}
+
+	err = session.channel.QueueBind(queueName, routingkey, exchange, false, nil)
 	if err != nil {
 		return nil, err
 	}
