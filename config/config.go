@@ -15,6 +15,7 @@ var (
 )
 
 func init() {
+	log.SetOutput(os.Stdout) // Make sure logging is not seen as error logs by Cloud Foundry
 	log.Println("Loading settings")
 	_, runningInCF := os.LookupEnv("VCAP_SERVICES")
 
@@ -61,7 +62,7 @@ func loadDevEnvironment() {
 	}
 	TlsConfig.InsecureSkipVerify = true
 
-	RMQConnectionString, found = os.LookupEnv("RMQ_DEV_URL")
+	RMQConnectionString, found = os.LookupEnv("DEV_RMQ_URL")
 	if !found {
 		log.Fatal("DEV_RMQ_URL env-variable not found!")
 	}

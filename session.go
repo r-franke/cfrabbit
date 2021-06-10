@@ -51,6 +51,13 @@ func New() *Session {
 		done:        make(chan bool),
 	}
 	go session.handleReconnect(config.RMQConnectionString)
+
+	// Wait until session ready
+	for {
+		if session.isReady {
+			break
+		}
+	}
 	return &session
 }
 
