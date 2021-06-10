@@ -23,6 +23,12 @@ type Session struct {
 	isReady         bool
 }
 
+type Publisher struct {
+	session      *Session
+	ExchangeName string
+	ExchangeType string
+}
+
 const (
 	reconnectDelay = 5 * time.Second
 	reInitDelay    = 2 * time.Second
@@ -118,7 +124,7 @@ func (session *Session) handleReInit(conn *amqp.Connection) bool {
 	}
 }
 
-// init will initialize channel & declare queue
+// init will initialize channel
 func (session *Session) init(conn *amqp.Connection) error {
 	ch, err := conn.Channel()
 
@@ -161,30 +167,30 @@ func (session *Session) changeChannel(channel *amqp.Channel) {
 // it continuously re-sends messages until a confirm is received.
 // This will block until the server sends a confirm. Errors are
 // only returned if the push action itself fails, see UnsafePublish.
-func (session *Session) Publish(exchange string, routingkey string, data []byte) error {
-	if !session.isReady {
+func (publisher Publisher) Publish(routingkey string, data []byte) error {
+	if !publisher.session.isReady {
 		return errors.New("failed to push push: not connected")
 	}
 	for {
-		err := session.UnsafePublish(exchange, routingkey, data)
+		err := publisher.session.UnsafePublish(publisher.ExchangeName, routingkey, data)
 		if err != nil {
-			session.errorLogger.Println("Publish failed. Retrying...")
+			publisher.session.errorLogger.Println("Publish failed. Retrying...")
 			select {
-			case <-session.done:
+			case <-publisher.session.done:
 				return errShutdown
 			case <-time.After(resendDelay):
 			}
 			continue
 		}
 		select {
-		case confirm := <-session.notifyConfirm:
+		case confirm := <-publisher.session.notifyConfirm:
 			if confirm.Ack {
-				session.infoLogger.Println("Publish confirmed!")
+				publisher.session.infoLogger.Println("Publish confirmed!")
 				return nil
 			}
 		case <-time.After(resendDelay):
 		}
-		session.infoLogger.Println("Publish didn't confirm. Retrying...")
+		publisher.session.infoLogger.Println("Publish didn't confirm. Retrying...")
 	}
 }
 
@@ -242,6 +248,20 @@ func NewConsumer(queueName string, routingkey string, exchange string) (<-chan a
 		false, // No-Wait
 		nil,   // Args
 	)
+}
+
+func NewPublisher(exchangeName, exchangeType string) (*Publisher, error) {
+	session := New()
+	err := session.channel.ExchangeDeclare(exchangeName, exchangeType, true, false, false, false, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return &Publisher{
+		session:      session,
+		ExchangeName: exchangeName,
+		ExchangeType: exchangeType,
+	}, nil
 }
 
 // Close will cleanly shutdown the channel and connection.
