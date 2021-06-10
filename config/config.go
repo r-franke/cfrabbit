@@ -16,21 +16,21 @@ var (
 
 func init() {
 	log.Println("Loading settings")
-	_, runningInHaas := os.LookupEnv("VCAP_SERVICES")
+	_, runningInCF := os.LookupEnv("VCAP_SERVICES")
 
-	if runningInHaas {
+	if runningInCF {
 		DevMode = false
-		loadHaasEnvironment()
+		loadCFEnvironment()
 	} else {
 		DevMode = true
 		loadDevEnvironment()
 	}
 }
 
-func loadHaasEnvironment() {
+func loadCFEnvironment() {
 	log.Println("Loading RMQ CF environment variables.")
 
-	// Parse vars from Haas Cloud Foundry
+	// Parse vars from CF Cloud Foundry
 	appEnv, err := cfenv.Current()
 
 	if err != nil {
@@ -45,7 +45,7 @@ func loadHaasEnvironment() {
 	RMQConnectionString = credentials["url"].(string)
 
 	if RMQConnectionString == "" {
-		log.Fatal("RMQ settings in Haas env are incomplete!")
+		log.Fatal("RMQ settings in CF env are incomplete!")
 	}
 
 	AppName = appEnv.Name
