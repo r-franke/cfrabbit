@@ -252,6 +252,7 @@ func NewConsumer(queueName string, routingkeys []string, exchange string) (<-cha
 	)
 }
 
+//goland:noinspection GoUnusedExportedFunction
 func NewPublisher(exchangeName, exchangeType string) (*Publisher, error) {
 	session := New()
 	err := session.channel.ExchangeDeclare(exchangeName, exchangeType, true, false, false, false, nil)
