@@ -228,6 +228,7 @@ func NewConsumer(queueName string, routingkeys []string, exchange string) (<-cha
 		return nil, errNotConnected
 	}
 
+	session.infoLogger.Printf("Declaring queue: %s\n", queueName)
 	_, err := session.channel.QueueDeclare(
 		queueName,
 		true,  // Durable
@@ -242,6 +243,7 @@ func NewConsumer(queueName string, routingkeys []string, exchange string) (<-cha
 	}
 
 	for _, rk := range routingkeys {
+		session.infoLogger.Printf("Binding queue: %s to exchange: %s with routingkey: %s\n", queueName, exchange, rk)
 		err = session.channel.QueueBind(queueName, rk, exchange, false, nil)
 		if err != nil {
 			return nil, err
@@ -262,6 +264,7 @@ func NewConsumer(queueName string, routingkeys []string, exchange string) (<-cha
 //goland:noinspection GoUnusedExportedFunction
 func NewPublisher(exchangeName, exchangeType string) (*Publisher, error) {
 	session := New()
+	session.infoLogger.Printf("Declaring exchange: %s, with type: %s\n", exchangeName, exchangeType)
 	err := session.channel.ExchangeDeclare(exchangeName, exchangeType, true, false, false, false, nil)
 	if err != nil {
 		return nil, err
