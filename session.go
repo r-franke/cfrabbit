@@ -215,7 +215,7 @@ func (session *Session) UnsafePublish(exchange string, routingkey string, data [
 }
 
 //goland:noinspection GoUnusedExportedFunction
-func NewConsumer(queueName string, routingkey string, exchange string) (<-chan amqp.Delivery, error) {
+func NewConsumer(queueName string, routingkeys []string, exchange string) (<-chan amqp.Delivery, error) {
 	session := New()
 	if !session.isReady {
 		return nil, errNotConnected
@@ -234,9 +234,11 @@ func NewConsumer(queueName string, routingkey string, exchange string) (<-chan a
 		return nil, err
 	}
 
-	err = session.channel.QueueBind(queueName, routingkey, exchange, false, nil)
-	if err != nil {
-		return nil, err
+	for _, rk := range routingkeys {
+		err = session.channel.QueueBind(queueName, rk, exchange, false, nil)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	return session.channel.Consume(
