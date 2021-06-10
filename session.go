@@ -46,8 +46,8 @@ var (
 //goland:noinspection GoUnusedExportedFunction
 func New() *Session {
 	session := Session{
-		infoLogger:  log.New(os.Stdout, "", log.LstdFlags),
-		errorLogger: log.New(os.Stderr, "", log.LstdFlags),
+		infoLogger:  log.New(os.Stdout, "cfrabbit: ", log.LstdFlags),
+		errorLogger: log.New(os.Stderr, "cfrabbit: ", log.LstdFlags),
 		done:        make(chan bool),
 	}
 	go session.handleReconnect(config.RMQConnectionString)
@@ -192,7 +192,6 @@ func (publisher Publisher) Publish(routingkey string, data []byte) error {
 		select {
 		case confirm := <-publisher.session.notifyConfirm:
 			if confirm.Ack {
-				publisher.session.infoLogger.Println("Publish confirmed!")
 				return nil
 			}
 		case <-time.After(resendDelay):
