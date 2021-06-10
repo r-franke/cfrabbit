@@ -32,7 +32,6 @@ func loadCFEnvironment() {
 
 	// Parse vars from CF Cloud Foundry
 	appEnv, err := cfenv.Current()
-
 	if err != nil {
 		log.Fatal("Cannot load system-variables from cloud foundry!")
 	}
@@ -42,7 +41,7 @@ func loadCFEnvironment() {
 		log.Println("Multiple Rabbit bindings discovered. Loading first one by default.")
 	}
 	credentials := rabbitVars[0].Credentials
-	RMQConnectionString = credentials["url"].(string)
+	RMQConnectionString = credentials["uri"].(string)
 
 	if RMQConnectionString == "" {
 		log.Fatal("RMQ settings in CF env are incomplete!")
