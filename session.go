@@ -46,8 +46,8 @@ var (
 //goland:noinspection GoUnusedExportedFunction
 func New() *Session {
 	session := Session{
-		infoLogger:  log.New(os.Stdout, "cfrabbit: ", log.LstdFlags),
-		errorLogger: log.New(os.Stderr, "cfrabbit: ", log.LstdFlags),
+		infoLogger:  log.New(os.Stdout, "cfrabbit: ", log.Lshortfile),
+		errorLogger: log.New(os.Stderr, "cfrabbit: ", log.Lshortfile),
 		done:        make(chan bool),
 	}
 	go session.handleReconnect(config.RMQConnectionString)

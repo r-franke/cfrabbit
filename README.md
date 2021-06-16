@@ -16,8 +16,11 @@ If  you want to run it in dev mode then make sure the following environment vari
 
 ## How to use
 
+`NewConsumer(queueName string, routingkeys []string, exchange string) (<-chan amqp.Delivery, error)`
+`NewPublisher(exchangeName, exchangeType string) (*Publisher, error)`
 
 ## Credits
 Thanks go out to creators and maintainers of these modules:
-- [go-cfenv](github.com/cloudfoundry-community/go-cfenv)
-- [streadway's amqp](github.com/streadway/amqp)
+- [go-cfenv](https://github.com/cloudfoundry-community/go-cfenv)
+- [streadway's amqp](https://github.com/streadway/amqp)
+- [google's uuid](https://github.com/google/uuid)
