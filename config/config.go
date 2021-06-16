@@ -12,13 +12,15 @@ var (
 	TlsConfig           = tls.Config{}
 	DevMode             bool
 	AppName             string
+	InfoLogger          *log.Logger
+	ErrorLogger         *log.Logger
 )
 
 func init() {
-	log.SetPrefix("cfrabbit: ")
-	log.SetFlags(log.Lshortfile)
-	log.SetOutput(os.Stdout) // Make sure logging is not seen as error logs by Cloud Foundry
-	log.Println("Loading settings")
+	InfoLogger = log.New(os.Stdout, "cfrabbit: ", log.Lshortfile)
+	ErrorLogger = log.New(os.Stderr, "cfrabbit: ", log.Lshortfile)
+
+	InfoLogger.Println("Loading settings")
 	_, runningInCF := os.LookupEnv("VCAP_SERVICES")
 
 	if runningInCF {
@@ -31,23 +33,23 @@ func init() {
 }
 
 func loadCFEnvironment() {
-	log.Println("Loading RMQ CF environment variables.")
+	InfoLogger.Println("Loading RMQ CF environment variables.")
 
 	// Parse vars from CF Cloud Foundry
 	appEnv, err := cfenv.Current()
 	if err != nil {
-		log.Fatal("Cannot load system-variables from cloud foundry!")
+		ErrorLogger.Fatal("Cannot load system-variables from cloud foundry!")
 	}
 
 	rabbitVars, _ := appEnv.Services.WithLabel("p.rabbitmq")
 	if len(rabbitVars) > 1 {
-		log.Println("Multiple Rabbit bindings discovered. Loading first one by default.")
+		InfoLogger.Println("Multiple Rabbit bindings discovered. Loading first one by default.")
 	}
 	credentials := rabbitVars[0].Credentials
 	RMQConnectionString = credentials["uri"].(string)
 
 	if RMQConnectionString == "" {
-		log.Fatal("RMQ settings in CF env are incomplete!")
+		ErrorLogger.Fatal("RMQ settings in CF env are incomplete!")
 	}
 
 	AppName = appEnv.Name
@@ -55,18 +57,18 @@ func loadCFEnvironment() {
 
 func loadDevEnvironment() {
 	var found bool
-	log.Print("Loading dev mode environment variables.")
+	InfoLogger.Print("Loading dev mode environment variables.")
 
 	// Overwrite SSH settings when in local dev mode, otherwise cert errors might occur.
 	TlsConfig.ServerName, found = os.LookupEnv("DEV_SERVER_NAME")
 	if !found {
-		log.Fatal("DEV_SERVER_NAME env-variable not found!")
+		ErrorLogger.Fatal("DEV_SERVER_NAME env-variable not found!")
 	}
 	TlsConfig.InsecureSkipVerify = true
 
 	RMQConnectionString, found = os.LookupEnv("DEV_RMQ_URL")
 	if !found {
-		log.Fatal("DEV_RMQ_URL env-variable not found!")
+		ErrorLogger.Fatal("DEV_RMQ_URL env-variable not found!")
 	}
 
 	AppName = "dev-instance"

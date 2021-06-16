@@ -6,14 +6,10 @@ import (
 	"github.com/google/uuid"
 	"github.com/r-franke/cfrabbit/config"
 	"github.com/streadway/amqp"
-	"log"
-	"os"
 	"time"
 )
 
 type Session struct {
-	infoLogger      *log.Logger
-	errorLogger     *log.Logger
 	connection      *amqp.Connection
 	channel         *amqp.Channel
 	done            chan bool
@@ -44,9 +40,7 @@ var (
 //goland:noinspection GoUnusedExportedFunction
 func New() *Session {
 	session := Session{
-		infoLogger:  log.New(os.Stdout, "cfrabbit: ", log.Lshortfile),
-		errorLogger: log.New(os.Stderr, "cfrabbit: ", log.Lshortfile),
-		done:        make(chan bool),
+		done: make(chan bool),
 	}
 	go session.handleReconnect(config.RMQConnectionString)
 
@@ -64,14 +58,14 @@ func New() *Session {
 func (session *Session) handleReconnect(addr string) {
 	for {
 		session.isReady = false
-		session.infoLogger.Println("Attempting to connect")
+		config.InfoLogger.Println("Attempting to connect")
 
 		conn, err := session.connect(addr)
 
 		if err != nil {
-			session.errorLogger.Println("Failed to connect:")
-			session.errorLogger.Println(err)
-			session.errorLogger.Println("Retrying...")
+			config.ErrorLogger.Println("Failed to connect:")
+			config.ErrorLogger.Println(err)
+			config.ErrorLogger.Println("Retrying...")
 
 			select {
 			case <-session.done:
@@ -96,7 +90,7 @@ func (session *Session) connect(addr string) (*amqp.Connection, error) {
 	}
 
 	session.changeConnection(conn)
-	session.infoLogger.Println("RMQ connected!")
+	config.InfoLogger.Println("RMQ connected!")
 	return conn, nil
 }
 
@@ -109,7 +103,7 @@ func (session *Session) handleReInit(conn *amqp.Connection) bool {
 		err := session.init(conn)
 
 		if err != nil {
-			session.errorLogger.Println("Failed to initialize channel. Retrying...")
+			config.ErrorLogger.Println("Failed to initialize channel. Retrying...")
 
 			select {
 			case <-session.done:
@@ -123,10 +117,10 @@ func (session *Session) handleReInit(conn *amqp.Connection) bool {
 		case <-session.done:
 			return true
 		case <-session.notifyConnClose:
-			session.infoLogger.Println("Connection closed. Reconnecting...")
+			config.InfoLogger.Println("Connection closed. Reconnecting...")
 			return false
 		case <-session.notifyChanClose:
-			session.infoLogger.Println("Channel closed. Re-running init...")
+			config.InfoLogger.Println("Channel closed. Re-running init...")
 		}
 	}
 }
@@ -146,7 +140,7 @@ func (session *Session) init(conn *amqp.Connection) error {
 	}
 	session.changeChannel(ch)
 	session.isReady = true
-	session.infoLogger.Println("RMQ is setup!")
+	config.InfoLogger.Println("RMQ is setup!")
 
 	return nil
 }
@@ -181,7 +175,7 @@ func (publisher Publisher) Publish(routingkey string, data []byte) error {
 	for {
 		err := publisher.session.UnsafePublish(publisher.ExchangeName, routingkey, data)
 		if err != nil {
-			publisher.session.errorLogger.Println("Publish failed. Retrying...")
+			config.ErrorLogger.Println("Publish failed. Retrying...")
 			select {
 			case <-publisher.session.done:
 				return errShutdown
@@ -196,7 +190,7 @@ func (publisher Publisher) Publish(routingkey string, data []byte) error {
 			}
 		case <-time.After(resendDelay):
 		}
-		publisher.session.infoLogger.Println("Publish didn't confirm. Retrying...")
+		config.InfoLogger.Println("Publish didn't confirm. Retrying...")
 	}
 }
 
@@ -227,7 +221,7 @@ func NewConsumer(queueName string, routingkeys []string, exchange string) (<-cha
 		return nil, errNotConnected
 	}
 
-	session.infoLogger.Printf("Declaring queue: %s\n", queueName)
+	config.InfoLogger.Printf("Declaring queue: %s\n", queueName)
 	_, err := session.channel.QueueDeclare(
 		queueName,
 		true,  // Durable
@@ -242,7 +236,7 @@ func NewConsumer(queueName string, routingkeys []string, exchange string) (<-cha
 	}
 
 	for _, rk := range routingkeys {
-		session.infoLogger.Printf("Binding queue: %s to exchange: %s with routingkey: %s\n", queueName, exchange, rk)
+		config.InfoLogger.Printf("Binding queue: %s to exchange: %s with routingkey: %s\n", queueName, exchange, rk)
 		err = session.channel.QueueBind(queueName, rk, exchange, false, nil)
 		if err != nil {
 			return nil, err
@@ -263,7 +257,7 @@ func NewConsumer(queueName string, routingkeys []string, exchange string) (<-cha
 //goland:noinspection GoUnusedExportedFunction
 func NewPublisher(exchangeName, exchangeType string) (*Publisher, error) {
 	session := New()
-	session.infoLogger.Printf("Declaring exchange: %s, with type: %s\n", exchangeName, exchangeType)
+	config.InfoLogger.Printf("Declaring exchange: %s, with type: %s\n", exchangeName, exchangeType)
 	err := session.channel.ExchangeDeclare(exchangeName, exchangeType, true, false, false, false, nil)
 	if err != nil {
 		return nil, err
