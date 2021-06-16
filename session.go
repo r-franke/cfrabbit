@@ -69,7 +69,9 @@ func (session *Session) handleReconnect(addr string) {
 		conn, err := session.connect(addr)
 
 		if err != nil {
-			session.errorLogger.Println("Failed to connect. Retrying...")
+			session.errorLogger.Println("Failed to connect:")
+			session.errorLogger.Println(err)
+			session.errorLogger.Println("Retrying...")
 
 			select {
 			case <-session.done:
