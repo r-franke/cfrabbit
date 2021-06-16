@@ -58,7 +58,6 @@ func New() *Session {
 func (session *Session) handleReconnect(addr string) {
 	for {
 		session.isReady = false
-		config.InfoLogger.Println("Attempting to connect")
 
 		conn, err := session.connect(addr)
 
@@ -90,7 +89,6 @@ func (session *Session) connect(addr string) (*amqp.Connection, error) {
 	}
 
 	session.changeConnection(conn)
-	config.InfoLogger.Println("RMQ connected!")
 	return conn, nil
 }
 
@@ -140,7 +138,6 @@ func (session *Session) init(conn *amqp.Connection) error {
 	}
 	session.changeChannel(ch)
 	session.isReady = true
-	config.InfoLogger.Println("RMQ is setup!")
 
 	return nil
 }
@@ -274,6 +271,11 @@ func NewPublisher(exchangeName, exchangeType string) (*Publisher, error) {
 func (session *Session) Close() error {
 	if !session.isReady {
 		return errAlreadyClosed
+	}
+	session.done <- true
+	err := session.channel.Close()
+	if err != nil {
+		return err
 	}
 	return nil
 }
