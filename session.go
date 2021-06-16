@@ -41,8 +41,6 @@ var (
 	errShutdown      = errors.New("session is shutting down")
 )
 
-// New creates a new consumer state instance, and automatically
-// attempts to connect to the server.
 //goland:noinspection GoUnusedExportedFunction
 func New() *Session {
 	session := Session{
@@ -96,7 +94,7 @@ func (session *Session) connect(addr string) (*amqp.Connection, error) {
 	}
 
 	session.changeConnection(conn)
-	session.infoLogger.Println("RQM connected!")
+	session.infoLogger.Println("RMQ connected!")
 	return conn, nil
 }
 
