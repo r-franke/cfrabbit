@@ -15,6 +15,8 @@ var (
 )
 
 func init() {
+	log.SetPrefix("cfrabbit: ")
+	log.SetFlags(log.Lshortfile)
 	log.SetOutput(os.Stdout) // Make sure logging is not seen as error logs by Cloud Foundry
 	log.Println("Loading settings")
 	_, runningInCF := os.LookupEnv("VCAP_SERVICES")
