@@ -212,14 +212,20 @@ func (session *Session) UnsafePublish(exchange string, routingkey string, data [
 }
 
 //goland:noinspection GoUnusedExportedFunction
-func NewConsumer(queueName string, routingkeys []string, exchange string) (<-chan amqp.Delivery, error) {
+func NewConsumer(queueName, exchangeName, exchangeType string, routingkeys []string) (<-chan amqp.Delivery, error) {
 	session := New()
 	if !session.isReady {
 		return nil, errNotConnected
 	}
 
+	config.InfoLogger.Printf("Declaring exchange: %s, with type: %s\n", exchangeName, exchangeType)
+	err := session.channel.ExchangeDeclare(exchangeName, exchangeType, true, false, false, false, nil)
+	if err != nil {
+		return nil, err
+	}
+
 	config.InfoLogger.Printf("Declaring queue: %s\n", queueName)
-	_, err := session.channel.QueueDeclare(
+	_, err = session.channel.QueueDeclare(
 		queueName,
 		true,  // Durable
 		false, // Delete when unused
@@ -233,8 +239,8 @@ func NewConsumer(queueName string, routingkeys []string, exchange string) (<-cha
 	}
 
 	for _, rk := range routingkeys {
-		config.InfoLogger.Printf("Binding queue: %s to exchange: %s with routingkey: %s\n", queueName, exchange, rk)
-		err = session.channel.QueueBind(queueName, rk, exchange, false, nil)
+		config.InfoLogger.Printf("Binding queue: %s to exchangeName: %s with routingkey: %s\n", queueName, exchangeName, rk)
+		err = session.channel.QueueBind(queueName, rk, exchangeName, false, nil)
 		if err != nil {
 			return nil, err
 		}
@@ -265,6 +271,44 @@ func NewPublisher(exchangeName, exchangeType string) (*Publisher, error) {
 		ExchangeName: exchangeName,
 		ExchangeType: exchangeType,
 	}, nil
+}
+
+//goland:noinspection GoUnusedExportedFunction
+func CreateAndBindQueue(exchangeName, exchangeType, queueName string, routingkeys []string) error {
+	session := New()
+	if !session.isReady {
+		return errNotConnected
+	}
+
+	config.InfoLogger.Printf("Declaring exchange: %s, with type: %s\n", exchangeName, exchangeType)
+	err := session.channel.ExchangeDeclare(exchangeName, exchangeType, true, false, false, false, nil)
+	if err != nil {
+		return err
+	}
+
+	config.InfoLogger.Printf("Declaring queue: %s\n", queueName)
+	_, err = session.channel.QueueDeclare(
+		queueName,
+		true,  // Durable
+		false, // Delete when unused
+		false, // Exclusive
+		false, // No-wait
+		nil,   // Arguments
+	)
+
+	if err != nil {
+		return err
+	}
+
+	for _, rk := range routingkeys {
+		config.InfoLogger.Printf("Binding queue: %s to exchangeName: %s with routingkey: %s\n", queueName, exchangeName, rk)
+		err = session.channel.QueueBind(queueName, rk, exchangeName, false, nil)
+		if err != nil {
+			return err
+		}
+	}
+	_ = session.Close()
+	return nil
 }
 
 // Close will cleanly shutdown the channel and connection.
