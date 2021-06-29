@@ -29,12 +29,14 @@ const (
 	reconnectDelay = 5 * time.Second
 	reInitDelay    = 2 * time.Second
 	resendDelay    = 5 * time.Second
+	maxRetries     = 5
 )
 
 var (
 	errNotConnected  = errors.New("not connected to a server")
 	errAlreadyClosed = errors.New("already closed: not connected to the server")
 	errShutdown      = errors.New("session is shutting down")
+	reconnectRetries = 0
 )
 
 //goland:noinspection GoUnusedExportedFunction
@@ -62,9 +64,13 @@ func (session *Session) handleReconnect(addr string) {
 		conn, err := session.connect(addr)
 
 		if err != nil {
+			if reconnectRetries > maxRetries {
+				config.ErrorLogger.Fatalf("Max retries for reconnect reached, restarting...")
+			}
+			reconnectRetries++
 			config.ErrorLogger.Println("Failed to connect:")
 			config.ErrorLogger.Println(err)
-			config.ErrorLogger.Println("Retrying...")
+			config.ErrorLogger.Printf("Retrying attempt %d out of %d...", reconnectRetries, maxRetries)
 
 			select {
 			case <-session.done:
@@ -73,6 +79,8 @@ func (session *Session) handleReconnect(addr string) {
 			}
 			continue
 		}
+
+		reconnectRetries = 0
 
 		if done := session.handleReInit(conn); done {
 			break
