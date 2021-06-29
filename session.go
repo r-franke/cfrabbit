@@ -319,6 +319,19 @@ func CreateAndBindQueue(exchangeName, exchangeType, queueName string, routingkey
 	return nil
 }
 
+//goland:noinspection GoUnusedExportedFunction
+func UnbindQueue(queueName, key, exchange string) error {
+
+	session := New()
+	if !session.isReady {
+		return errNotConnected
+	}
+
+	err := session.channel.QueueUnbind(queueName, key, exchange, amqp.Table{})
+	_ = session.Close()
+	return err
+}
+
 // Close will cleanly shutdown the channel and connection.
 func (session *Session) Close() error {
 	if !session.isReady {
