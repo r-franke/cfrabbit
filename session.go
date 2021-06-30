@@ -6,6 +6,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/r-franke/cfrabbit/config"
 	"github.com/streadway/amqp"
+	"strings"
 	"time"
 )
 
@@ -235,11 +236,11 @@ func NewConsumer(queueName, exchangeName, exchangeType string, routingkeys []str
 	config.InfoLogger.Printf("Declaring queue: %s\n", queueName)
 	_, err = session.channel.QueueDeclare(
 		queueName,
-		true,  // Durable
-		false, // Delete when unused
-		false, // Exclusive
-		false, // No-wait
-		nil,   // Arguments
+		true,                                 // Durable
+		strings.Contains(queueName, "-dev-"), // Delete when unused
+		false,                                // Exclusive
+		false,                                // No-wait
+		nil,                                  // Arguments
 	)
 
 	if err != nil {
@@ -297,11 +298,11 @@ func CreateAndBindQueue(exchangeName, exchangeType, queueName string, routingkey
 	config.InfoLogger.Printf("Declaring queue: %s\n", queueName)
 	_, err = session.channel.QueueDeclare(
 		queueName,
-		true,  // Durable
-		false, // Delete when unused
-		false, // Exclusive
-		false, // No-wait
-		nil,   // Arguments
+		true,                                 // Durable
+		strings.Contains(queueName, "-dev-"), // Delete when unused
+		false,                                // Exclusive
+		false,                                // No-wait
+		nil,                                  // Arguments
 	)
 
 	if err != nil {
