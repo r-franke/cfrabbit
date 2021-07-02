@@ -169,7 +169,7 @@ func (c *Consumer) init(conn *amqp.Connection) error {
 
 	c.changeChannel(ch)
 
-	c.Deliveries, err = c.channel.Consume(
+	c.Deliveries, err = ch.Consume(
 		c.queueName,
 		fmt.Sprintf("%s-%s", config.AppName, uuid.NewString()), // Consumer
 		false, // Auto-Ack
