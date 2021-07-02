@@ -162,9 +162,14 @@ func (c *Consumer) init(conn *amqp.Connection) error {
 		return err
 	}
 
+	err = ch.Confirm(false)
+	if err != nil {
+		return err
+	}
+
 	c.changeChannel(ch)
 
-	deliveries, err := c.channel.Consume(
+	c.Deliveries, err = c.channel.Consume(
 		c.queueName,
 		fmt.Sprintf("%s-%s", config.AppName, uuid.NewString()), // Consumer
 		false, // Auto-Ack
@@ -177,7 +182,6 @@ func (c *Consumer) init(conn *amqp.Connection) error {
 		return err
 	}
 
-	c.Deliveries = deliveries
 	c.isReady = true
 
 	return nil
