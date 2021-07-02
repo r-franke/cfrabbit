@@ -19,7 +19,7 @@ type Consumer struct {
 	isReady         bool
 	consumer        *Consumer
 	queueName       string
-	deliveries      <-chan amqp.Delivery
+	Deliveries      <-chan amqp.Delivery
 }
 
 const (
@@ -177,7 +177,7 @@ func (c *Consumer) init(conn *amqp.Connection) error {
 		return err
 	}
 
-	c.deliveries = deliveries
+	c.Deliveries = deliveries
 	c.isReady = true
 
 	return nil
