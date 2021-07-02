@@ -1,7 +1,6 @@
 package consumer
 
 import (
-	"errors"
 	"fmt"
 	"github.com/google/uuid"
 	"github.com/r-franke/cfrabbit/config"
@@ -30,15 +29,14 @@ const (
 )
 
 var (
-	errNotConnected  = errors.New("not connected to a server")
-	errAlreadyClosed = errors.New("already closed: not connected to the server")
 	reconnectRetries = 0
 )
 
 //goland:noinspection GoUnusedExportedFunction
-func New() *Consumer {
+func NewConsumer(queueName, exchangeName, exchangeType string, routingkeys []string) (Consumer, error) {
 	consumer := Consumer{
-		done: make(chan bool),
+		done:      make(chan bool),
+		queueName: queueName,
 	}
 	go consumer.handleReconnect(config.RMQConnectionString)
 
@@ -48,7 +46,37 @@ func New() *Consumer {
 			break
 		}
 	}
-	return &consumer
+
+	config.InfoLogger.Printf("Declaring exchange: %s, with type: %s\n", exchangeName, exchangeType)
+
+	err := consumer.channel.ExchangeDeclare(exchangeName, exchangeType, true, false, false, false, nil)
+	if err != nil {
+		return Consumer{}, err
+	}
+
+	config.InfoLogger.Printf("Declaring queue: %s\n", queueName)
+	_, err = consumer.channel.QueueDeclare(
+		queueName,
+		true,                                 // Durable
+		strings.Contains(queueName, "-dev-"), // Delete when unused
+		false,                                // Exclusive
+		false,                                // No-wait
+		nil,                                  // Arguments
+	)
+
+	if err != nil {
+		return Consumer{}, err
+	}
+
+	for _, rk := range routingkeys {
+		config.InfoLogger.Printf("Binding queue: %s to exchangeName: %s with routingkey: %s\n", queueName, exchangeName, rk)
+		err = consumer.channel.QueueBind(queueName, rk, exchangeName, false, nil)
+		if err != nil {
+			return Consumer{}, err
+		}
+	}
+
+	return consumer, nil
 }
 
 // handleReconnect will wait for a connection error on
@@ -171,50 +199,4 @@ func (c *Consumer) changeChannel(channel *amqp.Channel) {
 	c.notifyConfirm = make(chan amqp.Confirmation, 1)
 	c.channel.NotifyClose(c.notifyChanClose)
 	c.channel.NotifyPublish(c.notifyConfirm)
-}
-
-//goland:noinspection GoUnusedExportedFunction
-func NewConsumer(queueName, exchangeName, exchangeType string, routingkeys []string) (<-chan amqp.Delivery, error) {
-	session := New()
-	if !session.isReady {
-		return nil, errNotConnected
-	}
-
-	config.InfoLogger.Printf("Declaring exchange: %s, with type: %s\n", exchangeName, exchangeType)
-	err := session.channel.ExchangeDeclare(exchangeName, exchangeType, true, false, false, false, nil)
-	if err != nil {
-		return nil, err
-	}
-
-	config.InfoLogger.Printf("Declaring queue: %s\n", queueName)
-	_, err = session.channel.QueueDeclare(
-		queueName,
-		true,                                 // Durable
-		strings.Contains(queueName, "-dev-"), // Delete when unused
-		false,                                // Exclusive
-		false,                                // No-wait
-		nil,                                  // Arguments
-	)
-
-	if err != nil {
-		return nil, err
-	}
-
-	for _, rk := range routingkeys {
-		config.InfoLogger.Printf("Binding queue: %s to exchangeName: %s with routingkey: %s\n", queueName, exchangeName, rk)
-		err = session.channel.QueueBind(queueName, rk, exchangeName, false, nil)
-		if err != nil {
-			return nil, err
-		}
-	}
-
-	return session.channel.Consume(
-		queueName,
-		fmt.Sprintf("%s-%s", config.AppName, uuid.NewString()), // Consumer
-		false, // Auto-Ack
-		false, // Exclusive
-		false, // No-local
-		false, // No-Wait
-		nil,   // Args
-	)
 }
