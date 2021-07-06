@@ -20,6 +20,8 @@ type Consumer struct {
 	consumer        *Consumer
 	queueName       string
 	Deliveries      <-chan amqp.Delivery
+	routingkeys     []string
+	exchangeName    string
 }
 
 const (
@@ -35,8 +37,10 @@ var (
 //goland:noinspection GoUnusedExportedFunction
 func NewConsumer(queueName, exchangeName, exchangeType string, routingkeys []string) (Consumer, error) {
 	consumer := Consumer{
-		done:      make(chan bool),
-		queueName: queueName,
+		done:         make(chan bool),
+		queueName:    queueName,
+		routingkeys:  routingkeys,
+		exchangeName: exchangeName,
 	}
 	go consumer.handleReconnect(config.RMQConnectionString)
 
@@ -54,29 +58,35 @@ func NewConsumer(queueName, exchangeName, exchangeType string, routingkeys []str
 		return Consumer{}, err
 	}
 
-	config.InfoLogger.Printf("Declaring queue: %s\n", queueName)
-	_, err = consumer.channel.QueueDeclare(
-		queueName,
-		true,                                 // Durable
-		strings.Contains(queueName, "-dev-"), // Delete when unused
-		false,                                // Exclusive
-		false,                                // No-wait
-		nil,                                  // Arguments
+	return consumer, nil
+}
+
+func (c *Consumer) bindQueues() error {
+
+	config.InfoLogger.Printf("Declaring queue: %s\n", c.queueName)
+	_, err := c.channel.QueueDeclare(
+		c.queueName,
+		true,                                   // Durable
+		strings.Contains(c.queueName, "-dev-"), // Delete when unused
+		false,                                  // Exclusive
+		false,                                  // No-wait
+		nil,                                    // Arguments
 	)
 
 	if err != nil {
-		return Consumer{}, err
+		return err
 	}
 
-	for _, rk := range routingkeys {
-		config.InfoLogger.Printf("Binding queue: %s to exchangeName: %s with routingkey: %s\n", queueName, exchangeName, rk)
-		err = consumer.channel.QueueBind(queueName, rk, exchangeName, false, nil)
+	for _, rk := range c.routingkeys {
+		config.InfoLogger.Printf("Binding queue: %s to exchangeName: %s with routingkey: %s\n", c.queueName, c.exchangeName, rk)
+		err = c.channel.QueueBind(c.queueName, rk, c.exchangeName, false, nil)
 		if err != nil {
-			return Consumer{}, err
+			return err
 		}
 	}
 
-	return consumer, nil
+	return nil
+
 }
 
 // handleReconnect will wait for a connection error on
@@ -134,6 +144,18 @@ func (c *Consumer) handleReInit(conn *amqp.Connection) bool {
 
 		if err != nil {
 			config.ErrorLogger.Println("Failed to initialize channel. Retrying...")
+
+			select {
+			case <-c.done:
+				return true
+			case <-time.After(reInitDelay):
+			}
+			continue
+		}
+
+		err = c.bindQueues()
+		if err != nil {
+			config.ErrorLogger.Println("Failed to bind queues. Retrying...")
 
 			select {
 			case <-c.done:
