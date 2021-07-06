@@ -165,6 +165,26 @@ func (c *Consumer) handleReInit(conn *amqp.Connection) bool {
 			continue
 		}
 
+		c.Deliveries, err = c.channel.Consume(
+			c.queueName,
+			fmt.Sprintf("%s-%s", config.AppName, uuid.NewString()), // Consumer
+			false, // Auto-Ack
+			false, // Exclusive
+			false, // No-local
+			false, // No-Wait
+			nil,   // Args
+		)
+		if err != nil {
+			config.ErrorLogger.Println("Failed to consume queue. Retrying...")
+
+			select {
+			case <-c.done:
+				return true
+			case <-time.After(reInitDelay):
+			}
+			continue
+		}
+
 		select {
 		case <-c.done:
 			return true
@@ -190,19 +210,6 @@ func (c *Consumer) init(conn *amqp.Connection) error {
 	}
 
 	c.changeChannel(ch)
-
-	c.Deliveries, err = ch.Consume(
-		c.queueName,
-		fmt.Sprintf("%s-%s", config.AppName, uuid.NewString()), // Consumer
-		false, // Auto-Ack
-		false, // Exclusive
-		false, // No-local
-		false, // No-Wait
-		nil,   // Args
-	)
-	if err != nil {
-		return err
-	}
 
 	c.isReady = true
 
