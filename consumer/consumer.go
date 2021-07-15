@@ -61,6 +61,32 @@ func NewConsumer(queueName, exchangeName, exchangeType string, routingkeys []str
 	return &consumer, nil
 }
 
+func (c *Consumer) addRoutingKey(rk string) error {
+	c.routingkeys = append(c.routingkeys, rk)
+	err := c.channel.QueueBind(c.queueName, rk, c.exchangeName, false, nil)
+	if err != nil {
+		return err
+	}
+	return err
+}
+
+func (c *Consumer) removeRoutingKey(rk string) error {
+	var newRoutingkeys []string
+	for _, OldRk := range c.routingkeys {
+		if OldRk != rk {
+			newRoutingkeys = append(newRoutingkeys, OldRk)
+		}
+	}
+	c.routingkeys = newRoutingkeys
+
+	err := c.channel.QueueUnbind(c.queueName, rk, c.exchangeName, amqp.Table{})
+	if err != nil {
+		return err
+	}
+	return err
+
+}
+
 func (c *Consumer) bindQueues() error {
 
 	config.InfoLogger.Printf("Declaring queue: %s\n", c.queueName)
