@@ -35,7 +35,7 @@ var (
 )
 
 //goland:noinspection GoUnusedExportedFunction
-func NewConsumer(queueName, exchangeName, exchangeType string, routingkeys []string) (Consumer, error) {
+func NewConsumer(queueName, exchangeName, exchangeType string, routingkeys []string) (*Consumer, error) {
 	consumer := Consumer{
 		done:         make(chan bool),
 		queueName:    queueName,
@@ -55,10 +55,10 @@ func NewConsumer(queueName, exchangeName, exchangeType string, routingkeys []str
 
 	err := consumer.channel.ExchangeDeclare(exchangeName, exchangeType, true, false, false, false, nil)
 	if err != nil {
-		return Consumer{}, err
+		return &Consumer{}, err
 	}
 
-	return consumer, nil
+	return &consumer, nil
 }
 
 func (c *Consumer) bindQueues() error {
