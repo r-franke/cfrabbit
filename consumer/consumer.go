@@ -61,7 +61,7 @@ func NewConsumer(queueName, exchangeName, exchangeType string, routingkeys []str
 	return &consumer, nil
 }
 
-func (c *Consumer) addRoutingKey(rk string) error {
+func (c *Consumer) AddRoutingKey(rk string) error {
 	c.routingkeys = append(c.routingkeys, rk)
 	err := c.channel.QueueBind(c.queueName, rk, c.exchangeName, false, nil)
 	if err != nil {
@@ -70,7 +70,7 @@ func (c *Consumer) addRoutingKey(rk string) error {
 	return err
 }
 
-func (c *Consumer) removeRoutingKey(rk string) error {
+func (c *Consumer) RemoveRoutingKey(rk string) error {
 	var newRoutingkeys []string
 	for _, OldRk := range c.routingkeys {
 		if OldRk != rk {
