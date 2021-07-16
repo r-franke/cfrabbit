@@ -63,6 +63,7 @@ func NewConsumer(queueName, exchangeName, exchangeType string, routingkeys []str
 
 func (c *Consumer) AddRoutingKey(rk string) error {
 	c.routingkeys = append(c.routingkeys, rk)
+	config.InfoLogger.Printf("Binding queue: %s to exchangeName: %s with routingkey: %s\n", c.queueName, c.exchangeName, rk)
 	err := c.channel.QueueBind(c.queueName, rk, c.exchangeName, false, nil)
 	if err != nil {
 		return err
@@ -79,6 +80,7 @@ func (c *Consumer) RemoveRoutingKey(rk string) error {
 	}
 	c.routingkeys = newRoutingkeys
 
+	config.InfoLogger.Printf("Unbinding queue: %s from exchangeName: %s with routingkey: %s\n", c.queueName, c.exchangeName, rk)
 	err := c.channel.QueueUnbind(c.queueName, rk, c.exchangeName, amqp.Table{})
 	if err != nil {
 		return err
