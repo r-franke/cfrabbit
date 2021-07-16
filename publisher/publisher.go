@@ -27,7 +27,7 @@ type Publisher struct {
 }
 
 //goland:noinspection GoUnusedExportedFunction
-func NewPublisher(exchangeName, exchangeType string) (Publisher, error) {
+func NewPublisher(exchangeName, exchangeType string) (*Publisher, error) {
 	publisher := Publisher{
 		done:         make(chan bool),
 		ExchangeName: exchangeName,
@@ -45,10 +45,10 @@ func NewPublisher(exchangeName, exchangeType string) (Publisher, error) {
 	config.InfoLogger.Printf("Declaring exchange: %s, with type: %s\n", exchangeName, exchangeType)
 	err := publisher.channel.ExchangeDeclare(exchangeName, exchangeType, true, false, false, false, nil)
 	if err != nil {
-		return Publisher{}, err
+		return &Publisher{}, err
 	}
 
-	return publisher, nil
+	return &publisher, nil
 }
 
 // Publish will push data onto the queue, and wait for a confirm.
