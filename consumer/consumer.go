@@ -213,6 +213,8 @@ func (c *Consumer) handleReInit(conn *amqp.Connection) bool {
 			continue
 		}
 
+		c.isReady = true
+
 		select {
 		case <-c.done:
 			return true
@@ -238,8 +240,6 @@ func (c *Consumer) init(conn *amqp.Connection) error {
 	}
 
 	c.changeChannel(ch)
-
-	c.isReady = true
 
 	return nil
 }
