@@ -31,6 +31,12 @@ func (p *Publisher) handleReconnect(addr string) {
 			case <-time.After(reconnectDelay):
 			}
 			continue
+		} else {
+			if reconnectRetries > 0 {
+				config.InfoLogger.Printf("Connected to %s after %d retries", addr, reconnectRetries)
+			} else {
+				config.InfoLogger.Printf("Connected to %s.", addr)
+			}
 		}
 
 		reconnectRetries = 0
