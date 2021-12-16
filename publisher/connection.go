@@ -103,6 +103,16 @@ func (p *Publisher) init(conn *amqp.Connection) error {
 		return err
 	}
 
+	if config.RMQBasicQos != nil {
+		config.InfoLogger.Println("Applying Qos settings to channel")
+
+		err = ch.Qos(config.RMQBasicQos.PrefetchCount, config.RMQBasicQos.PrefetchSize, config.RMQBasicQos.Global)
+		if err != nil {
+			config.ErrorLogger.Println("Error while applying Qos settings to channel %s", err.Error())
+			return err
+		}
+	}
+
 	p.changeChannel(ch)
 
 	p.isReady = true

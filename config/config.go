@@ -14,7 +14,14 @@ var (
 	AppName             string
 	InfoLogger          *log.Logger
 	ErrorLogger         *log.Logger
+	RMQBasicQos         *RMQBasicQosSettings
 )
+
+type RMQBasicQosSettings struct {
+	PrefetchSize  int
+	PrefetchCount int
+	Global        bool
+}
 
 func init() {
 	InfoLogger = log.New(os.Stdout, "cfrabbit: ", log.Lshortfile)
@@ -29,6 +36,12 @@ func init() {
 	} else {
 		DevMode = true
 		loadDevEnvironment()
+	}
+
+	RMQBasicQos = &RMQBasicQosSettings{
+		PrefetchSize:  0,
+		PrefetchCount: 25,
+		Global:        false,
 	}
 }
 
