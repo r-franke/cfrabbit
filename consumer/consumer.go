@@ -22,6 +22,7 @@ type Consumer struct {
 	Deliveries      <-chan amqp.Delivery
 	routingkeys     []string
 	exchangeName    string
+	maxPrefetch     int
 }
 
 const (
@@ -35,16 +36,13 @@ var (
 )
 
 //goland:noinspection GoUnusedExportedFunction
-func NewConsumer(queueName, exchangeName, exchangeType string, routingkeys []string) (*Consumer, error) {
+func NewConsumer(queueName, exchangeName, exchangeType string, routingkeys []string, maxPrefetch int) (*Consumer, error) {
 	consumer := Consumer{
 		done:         make(chan bool),
 		queueName:    queueName,
 		routingkeys:  routingkeys,
 		exchangeName: exchangeName,
-	}
-	err := consumer.channel.Qos(0, 52428800, false)
-	if err != nil {
-		return &Consumer{}, err
+		maxPrefetch:  maxPrefetch,
 	}
 
 	go consumer.handleReconnect(config.RMQConnectionString)
@@ -58,7 +56,7 @@ func NewConsumer(queueName, exchangeName, exchangeType string, routingkeys []str
 
 	config.InfoLogger.Printf("Declaring exchange: %s, with type: %s\n", exchangeName, exchangeType)
 
-	err = consumer.channel.ExchangeDeclare(exchangeName, exchangeType, true, false, false, false, nil)
+	err := consumer.channel.ExchangeDeclare(exchangeName, exchangeType, true, false, false, false, nil)
 	if err != nil {
 		return &Consumer{}, err
 	}
@@ -235,6 +233,11 @@ func (c *Consumer) handleReInit(conn *amqp.Connection) bool {
 // init will initialize channel
 func (c *Consumer) init(conn *amqp.Connection) error {
 	ch, err := conn.Channel()
+	if err != nil {
+		return err
+	}
+
+	err = ch.Qos(c.maxPrefetch, 0, false)
 	if err != nil {
 		return err
 	}
