@@ -42,6 +42,11 @@ func NewConsumer(queueName, exchangeName, exchangeType string, routingkeys []str
 		routingkeys:  routingkeys,
 		exchangeName: exchangeName,
 	}
+	err := consumer.channel.Qos(0, 52428800, false)
+	if err != nil {
+		return &Consumer{}, err
+	}
+
 	go consumer.handleReconnect(config.RMQConnectionString)
 
 	// Wait until consumer ready
@@ -53,7 +58,7 @@ func NewConsumer(queueName, exchangeName, exchangeType string, routingkeys []str
 
 	config.InfoLogger.Printf("Declaring exchange: %s, with type: %s\n", exchangeName, exchangeType)
 
-	err := consumer.channel.ExchangeDeclare(exchangeName, exchangeType, true, false, false, false, nil)
+	err = consumer.channel.ExchangeDeclare(exchangeName, exchangeType, true, false, false, false, nil)
 	if err != nil {
 		return &Consumer{}, err
 	}
