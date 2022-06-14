@@ -3,7 +3,7 @@ package cfrabbit
 import (
 	"errors"
 	"github.com/r-franke/cfrabbit/config"
-	"github.com/streadway/amqp"
+	amqp "github.com/rabbitmq/amqp091-go"
 	"strings"
 	"time"
 )
